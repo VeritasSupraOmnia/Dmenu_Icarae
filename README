@@ -1,3 +1,7 @@
+A customized fork of dmenu which rebinds some controls to be more vim-user friendly.
+I know that dmenu mirros vim command line binds but I never use Ctrl-H instead of backspace.
+The following readme is the same as vanilla dmenu, the upstream for which is https://git.suckless.org/dmenu
+
 dmenu - dynamic menu
 ====================
 dmenu is an efficient dynamic menu for X.
