@@ -59,39 +59,38 @@ static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
 static char *(*fstrstr)(const char *, const char *) = strstr;
 
 static void
-appenditem(struct item *item, struct item **list, struct item **last)
-{
-	if (*last)
-		(*last)->right = item;
-	else
-		*list = item;
-
+appenditem(struct item *item, struct item **list,struct item **last)
+{{{
+	//if there IS a last, connect it to this item otherwise initialize the list
+	*last?    (*last)->right=item:   (*list = item);
+	//
+	//then, set up this item's list pointers and make IT the last
 	item->left = *last;
 	item->right = NULL;
 	*last = item;
-}
+}}}
 
 static void
 calcoffsets(void)
-{
+{{{
 	int i, n;
 
-	if (lines > 0)
-		n = lines * bh;
-	else
-		n = mw - (promptw + inputw + TEXTW("<") + TEXTW(">"));
+	n=lines > 0
+		?lines * bh
+		:mw - (promptw + inputw + TEXTW("<") + TEXTW(">"));
+
 	/* calculate which items will begin the next page and previous page */
 	for (i = 0, next = curr; next; next = next->right)
-		if ((i += (lines > 0) ? bh : MIN(TEXTW(next->text), n)) > n)
+		if ((i+= (lines>0)?  bh:  MIN(TEXTW(next->text), n)) > n)
 			break;
 	for (i = 0, prev = curr; prev && prev->left; prev = prev->left)
-		if ((i += (lines > 0) ? bh : MIN(TEXTW(prev->left->text), n)) > n)
+		if ((i+= (lines>0)?  bh:   MIN(TEXTW(prev->left->text), n)) > n)
 			break;
-}
+}}}
 
 static void
 cleanup(void)
-{
+{{{
 	size_t i;
 
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
@@ -100,22 +99,22 @@ cleanup(void)
 	drw_free(drw);
 	XSync(dpy, False);
 	XCloseDisplay(dpy);
-}
+}}}
 
 static char *
 cistrstr(const char *s, const char *sub)
-{
+{{{
 	size_t len;
 
 	for (len = strlen(sub); *s; s++)
 		if (!strncasecmp(s, sub, len))
 			return (char *)s;
 	return NULL;
-}
+}}}
 
 static int
 drawitem(struct item *item, int x, int y, int w)
-{
+{{{
 	if (item == sel)
 		drw_setscheme(drw, scheme[SchemeSel]);
 	else if (item->out)
@@ -124,11 +123,12 @@ drawitem(struct item *item, int x, int y, int w)
 		drw_setscheme(drw, scheme[SchemeNorm]);
 
 	return drw_text(drw, x, y, w, bh, lrpad / 2, item->text, 0);
-}
+}}}
 
 static void
 drawmenu(void)
-{
+{{{
+
 	unsigned int curpos;
 	struct item *item;
 	int x = 0, y = 0, w;
@@ -153,6 +153,7 @@ drawmenu(void)
 
 	if (lines > 0) {
 		/* draw vertical list */
+		struct item *start_item=item;
 		for (item = curr; item != next; item = item->right)
 			drawitem(item, x, y += bh, mw - x);
 	} else if (matches) {
@@ -173,11 +174,10 @@ drawmenu(void)
 		}
 	}
 	drw_map(drw, win, 0, 0, mw, mh);
-}
+}}}
 
 static void
-grabfocus(void)
-{
+grabfocus(void){{{
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 10000000  };
 	Window focuswin;
 	int i, revertwin;
@@ -190,11 +190,11 @@ grabfocus(void)
 		nanosleep(&ts, NULL);
 	}
 	die("cannot grab focus");
-}
+}}}
 
 static void
 grabkeyboard(void)
-{
+{{{
 	struct timespec ts = { .tv_sec = 0, .tv_nsec = 1000000  };
 	int i;
 
@@ -208,11 +208,11 @@ grabkeyboard(void)
 		nanosleep(&ts, NULL);
 	}
 	die("cannot grab keyboard");
-}
+}}}
 
 static void
 match(void)
-{
+{{{
 	static char **tokv = NULL;
 	static int tokn = 0;
 
@@ -262,11 +262,12 @@ match(void)
 	}
 	curr = sel = matches;
 	calcoffsets();
-}
+}}}
 
 static void
 insert(const char *str, ssize_t n)
-{
+{{{
+
 	if (strlen(text) + n > sizeof text - 1)
 		return;
 	/* move existing text out of the way, insert new text, and update cursor */
@@ -275,22 +276,22 @@ insert(const char *str, ssize_t n)
 		memcpy(&text[cursor], str, n);
 	cursor += n;
 	match();
-}
+}}}
 
 static size_t
 nextrune(int inc)
-{
+{{{
 	ssize_t n;
 
 	/* return location of next utf8 rune in the given direction (+1 or -1) */
 	for (n = cursor + inc; n + inc >= 0 && (text[n] & 0xc0) == 0x80; n += inc)
 		;
 	return n;
-}
+}}}
 
 static void
 movewordedge(int dir)
-{
+{{{
 	if (dir < 0) { /* move cursor to the start of the word*/
 		while (cursor > 0 && strchr(worddelimiters, text[nextrune(-1)]))
 			cursor = nextrune(-1);
@@ -302,11 +303,11 @@ movewordedge(int dir)
 		while (text[cursor] && !strchr(worddelimiters, text[cursor]))
 			cursor = nextrune(+1);
 	}
-}
+}}}
 
 static void
 keypress(XKeyEvent *ev)
-{
+{{{
 	char buf[32];
 	int len;
 	KeySym ksym;
@@ -332,16 +333,18 @@ keypress(XKeyEvent *ev)
 		case XK_e: ksym = XK_End;       break;
 		case XK_f: ksym = XK_Right;     break;
 		case XK_g: ksym = XK_Escape;    break;
-		case XK_h: ksym = XK_BackSpace; break;
+		case XK_h: ksym = XK_Up;		break;
+		case XK_l: ksym = XK_Down;		break;
 		case XK_i: ksym = XK_Tab;       break;
-		case XK_j: /* fallthrough */
+		case XK_k: ksym = XK_Up;		break;
+		case XK_j: ksym = XK_Down;		break;
 		case XK_J: /* fallthrough */
 		case XK_m: /* fallthrough */
 		case XK_M: ksym = XK_Return; ev->state &= ~ControlMask; break;
 		case XK_n: ksym = XK_Down;      break;
 		case XK_p: ksym = XK_Up;        break;
 
-		case XK_k: /* delete right */
+		case XK_r: /* delete right */
 			text[cursor] = '\0';
 			match();
 			break;
@@ -509,11 +512,11 @@ insert:
 
 draw:
 	drawmenu();
-}
+}}}
 
 static void
 paste(void)
-{
+{{{
 	char *p, *q;
 	int di;
 	unsigned long dl;
@@ -527,11 +530,11 @@ paste(void)
 		XFree(p);
 	}
 	drawmenu();
-}
+}}}
 
 static void
 readstdin(void)
-{
+{{{
 	char buf[sizeof text], *p;
 	size_t i, imax = 0, size = 0;
 	unsigned int tmpmax = 0;
@@ -556,11 +559,11 @@ readstdin(void)
 		items[i].text = NULL;
 	inputw = items ? TEXTW(items[imax].text) : 0;
 	lines = MIN(lines, i);
-}
+}}}
 
 static void
 run(void)
-{
+{{{
 	XEvent ev;
 
 	while (!XNextEvent(dpy, &ev)) {
@@ -594,11 +597,11 @@ run(void)
 			break;
 		}
 	}
-}
+}}}
 
 static void
 setup(void)
-{
+{{{
 	int x, y, i, j;
 	unsigned int du;
 	XSetWindowAttributes swa;
@@ -695,19 +698,19 @@ setup(void)
 	}
 	drw_resize(drw, mw, mh);
 	drawmenu();
-}
+}}}
 
 static void
 usage(void)
-{
+{{{
 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
 	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n", stderr);
 	exit(1);
-}
+}}}
 
 int
 main(int argc, char *argv[])
-{
+{{{
 	XWindowAttributes wa;
 	int i, fast = 0;
 
@@ -779,4 +782,4 @@ main(int argc, char *argv[])
 	run();
 
 	return 1; /* unreachable */
-}
+}}}
